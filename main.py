@@ -1,35 +1,31 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from apscheduler.schedulers.background import BackgroundScheduler
-import asyncio
+import os
 
 TOKEN = "8268999726:AAHtUPWKCblz0ke9tfRZRPnV5IJ10mFC48s"
 
-# Fon vazifa
-async def fon_vazifa(app):
-    chat_ids = [123456789]  # shu yerga foydalanuvchi chat_id larini qo'yish mumkin
-    for chat_id in chat_ids:
-        try:
-            await app.bot.send_message(chat_id, "Salom! Bu fon vazifa xabari.")
-        except Exception as e:
-            print(f"Xatolik: {e}")
-
-# Telegramdan xabar oluvchi handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Siz yozdingiz: {update.message.text}")
+    text = update.message.text
 
-# Asosiy funksiya
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # Instagram link
+    if text and "instagram.com" in text:
+        await update.message.reply_text("Instagram video yuborildi, lekin ovoz chiqarish uchun FFmpeg kerak bo‘ladi. Bu versiyada faqat linkni yuborish mumkin.")
+        await update.message.reply_text(f"Instagram link: {text}")
 
-    # Background scheduler ishga tushadi
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(lambda: asyncio.create_task(fon_vazifa(app)), 'interval', seconds=30)
-    scheduler.start()
+    # Telegram video
+    elif update.message.video:
+        await update.message.reply_text("Video yuborildi, lekin ovoz chiqarish uchun FFmpeg kerak bo‘ladi. Bu versiyada faqat video yuboriladi.")
+        video_file = await update.message.video.get_file()
+        video_path = "temp_video.mp4"
+        await video_file.download_to_drive(video_path)
+        await update.message.reply_video(open(video_path, "rb"))
+        os.remove(video_path)
 
-    print("Bot ishga tushdi...")
-    app.run_polling()  # Bu allaqachon asyncio loop ishlatadi
+    else:
+        await update.message.reply_text("Iltimos, Instagram linki yoki video yuboring!")
 
-if __name__ == "__main__":
-    main()
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(MessageHandler(filters.ALL, handle_message))
+
+print("Bot ishga tushdi...")
+app.run_polling()
